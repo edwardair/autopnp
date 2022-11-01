@@ -76,9 +76,23 @@ void RoomRotator::rotateRoom(const cv::Mat& room_map, cv::Mat& rotated_room_map,
 // compute the affine rotation matrix for rotating a room into parallel alignment with x-axis (longer side of the room is aligned with x-axis)
 // R is the transform
 // bounding_rect is the ROI of the warped image
-double RoomRotator::computeRoomRotationMatrix(const cv::Mat& room_map, cv::Mat& R, cv::Rect& bounding_rect,
-		const double map_resolution, const cv::Point* center, const double rotation_offset)
-{
+/**
+ * 计算将房间旋转到与x轴平行对齐的仿射旋转矩阵(房间较长的一侧与x轴对齐)
+ * @param room_map
+ * @param R
+ * @param bounding_rect
+ * @param map_resolution
+ * @param center
+ * @param rotation_offset
+ * @return
+ */
+double RoomRotator::computeRoomRotationMatrix(
+        const cv::Mat &room_map,
+        cv::Mat &R,
+        cv::Rect &bounding_rect,
+        const double map_resolution,
+        const cv::Point *center,
+        const double rotation_offset) {
 	// rotation angle of the map s.t. the most occurring gradient is in 90 degree to the x-axis
 	double rotation_angle = computeRoomMainDirection(room_map, map_resolution) + rotation_offset;
 	std::cout << "RoomRotator::computeRoomRotationMatrix: main rotation angle: " << rotation_angle << std::endl;
@@ -110,8 +124,11 @@ double RoomRotator::computeRoomRotationMatrix(const cv::Mat& room_map, cv::Mat& 
 
 // computes the major direction of the walls from a map (preferably one room)
 // the map (room_map, CV_8UC1) is black (0) at impassable areas and white (255) on drivable areas
+//从地图上计算墙壁的主要方向(最好是一个房间)
+//地图(room_map, CV_8UC1)是黑色(0)在不可通过的区域和白色(255)在可驾驶的区域
 double RoomRotator::computeRoomMainDirection(const cv::Mat& room_map, const double map_resolution)
 {
+    // 分辨率 倒数
 	const double map_resolution_inverse = 1./map_resolution;
 
 	// compute Hough transform on edge image of the map

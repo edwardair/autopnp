@@ -411,9 +411,32 @@ void RoomExplorationServer::exploreRoom(const ipa_building_msgs::RoomExploration
 	{
 		// plan path
 		if(planning_mode_ == PLAN_FOR_FOV)
-			boustrophedon_explorer_.getExplorationPath(room_map, exploration_path, map_resolution, starting_position, map_origin, grid_spacing_in_pixel, grid_obstacle_offset_, path_eps_, cell_visiting_order_, false, fitting_circle_center_point_in_meter, min_cell_area_, max_deviation_from_track_);
+			boustrophedon_explorer_.getExplorationPath(room_map,
+                                                       exploration_path,
+                                                       map_resolution,
+                                                       starting_position,
+                                                       map_origin,
+                                                       grid_spacing_in_pixel,
+                                                       grid_obstacle_offset_,
+                                                       path_eps_,
+                                                       cell_visiting_order_,
+                                                       false,
+                                                       fitting_circle_center_point_in_meter,
+                                                       min_cell_area_,
+                                                       max_deviation_from_track_);
 		else
-			boustrophedon_explorer_.getExplorationPath(room_map, exploration_path, map_resolution, starting_position, map_origin, grid_spacing_in_pixel, grid_obstacle_offset_, path_eps_, cell_visiting_order_, true, zero_vector, min_cell_area_, max_deviation_from_track_);
+			boustrophedon_explorer_.getExplorationPath(room_map,
+                                                       exploration_path,
+                                                       map_resolution,
+                                                       starting_position,
+                                                       map_origin,
+                                                       grid_spacing_in_pixel,
+                                                       grid_obstacle_offset_,
+                                                       path_eps_, cell_visiting_order_,
+                                                       true,
+                                                       zero_vector,
+                                                       min_cell_area_,
+                                                       max_deviation_from_track_);
 	}
 	else if (room_exploration_algorithm_ == 3) // use neural network explorator
 	{

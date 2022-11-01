@@ -85,10 +85,16 @@ void GridPointExplorator::tsp_solver_thread(const int tsp_solver, std::vector<in
 //			Poses are computed, by calculating a vector from the old node to the next and using the angle of this with the x-axis
 //			as angle for the Poses.
 // room_map = expects to receive the original, not inflated room map
-void GridPointExplorator::getExplorationPath(const cv::Mat& room_map, std::vector<geometry_msgs::Pose2D>& path, const double map_resolution,
-		const cv::Point starting_position, const cv::Point2d map_origin, const int cell_size, const bool plan_for_footprint,
-		const Eigen::Matrix<float, 2, 1> robot_to_fov_vector, int tsp_solver, int64_t tsp_solver_timeout)
-{
+void GridPointExplorator::getExplorationPath(const cv::Mat &room_map,// 连通区 地图
+                                             std::vector <geometry_msgs::Pose2D> &path, // 规划的路径结果
+                                             const double map_resolution, // 分辨率
+                                             const cv::Point starting_position, // 起始点
+                                             const cv::Point2d map_origin, // 地图原点
+                                             const int cell_size, // 网格尺寸（像素）
+                                             const bool plan_for_footprint, //
+                                             const Eigen::Matrix<float, 2, 1> robot_to_fov_vector, // 矩阵
+                                             int tsp_solver,
+                                             int64_t tsp_solver_timeout) {
 	const int half_cell_size = cell_size/2;
 
 	// *********************** I. Find the main directions of the map and rotate it in this manner. ***********************

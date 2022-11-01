@@ -44,14 +44,26 @@ BoustrophedonExplorer::BoustrophedonExplorer()
 //		middlepoint s.t. the distance to the last robot position is minimized. If this is not wanted one has to set the
 //		corresponding Boolean to false (shows that the path planning should be done for the robot footprint).
 // room_map = expects to receive the original, not inflated room map
-void BoustrophedonExplorer::getExplorationPath(const cv::Mat& room_map, std::vector<geometry_msgs::Pose2D>& path,
-		const float map_resolution, const cv::Point starting_position, const cv::Point2d map_origin,
-		const double grid_spacing_in_pixel, const double grid_obstacle_offset, const double path_eps, const int cell_visiting_order,
-		const bool plan_for_footprint, const Eigen::Matrix<float, 2, 1> robot_to_fov_vector, const double min_cell_area, const int max_deviation_from_track)
-{
+void BoustrophedonExplorer::getExplorationPath(
+        const cv::Mat &room_map, // 连通区 地图
+        std::vector <geometry_msgs::Pose2D> &path, // 规划的路径结果
+        const float map_resolution, // 分辨率
+        const cv::Point starting_position, // 起始点
+        const cv::Point2d map_origin, // 地图原点
+        const double grid_spacing_in_pixel,
+        const double grid_obstacle_offset,
+        const double path_eps,
+        const int cell_visiting_order,
+        const bool plan_for_footprint,
+        const Eigen::Matrix<float, 2, 1> robot_to_fov_vector,
+        const double min_cell_area,
+        const int max_deviation_from_track) {
 	ROS_INFO("Planning the boustrophedon path trough the room.");
+	// 网格尺寸
 	const int grid_spacing_as_int = (int)std::floor(grid_spacing_in_pixel); // convert fov-radius to int
+	// 网格一半
 	const int half_grid_spacing_as_int = (int)std::floor(0.5*grid_spacing_in_pixel); // convert fov-radius to int
+	// 最小网格宽度
 	const int min_cell_width = half_grid_spacing_as_int + 2.*grid_obstacle_offset/map_resolution;
 
 	// *********************** I. Find the main directions of the map and rotate it in this manner. ***********************
@@ -62,7 +74,16 @@ void BoustrophedonExplorer::getExplorationPath(const cv::Mat& room_map, std::vec
 	cv::Mat rotated_room_map;
 	std::vector<GeneralizedPolygon> cell_polygons;
 	std::vector<cv::Point> polygon_centers;
-	computeCellDecompositionWithRotation(room_map, map_resolution, min_cell_area, min_cell_width, 0., R, bbox, rotated_room_map, cell_polygons, polygon_centers);
+	computeCellDecompositionWithRotation(room_map,
+                                         map_resolution,
+                                         min_cell_area,
+                                         min_cell_width,
+                                         0.,
+                                         R,
+                                         bbox,
+                                         rotated_room_map,
+                                         cell_polygons,
+                                         polygon_centers);
 	// does not work so well: findBestCellDecomposition(room_map, map_resolution, min_cell_area, R, bbox, rotated_room_map, cell_polygons, polygon_centers);
 
 	ROS_INFO("Found the cells in the given map.");
@@ -229,14 +250,39 @@ void BoustrophedonExplorer::findBestCellDecomposition(const cv::Mat& room_map, c
 		polygon_centers = polygon_centers_2;
 	}
 }
-
-void BoustrophedonExplorer::computeCellDecompositionWithRotation(const cv::Mat& room_map, const float map_resolution, const double min_cell_area,
-		const int min_cell_width, const double rotation_offset, cv::Mat& R, cv::Rect& bbox, cv::Mat& rotated_room_map,
-		std::vector<GeneralizedPolygon>& cell_polygons, std::vector<cv::Point>& polygon_centers)
-{
-	// *********************** I. Find the main directions of the map and rotate it in this manner. ***********************
-	RoomRotator room_rotation;
-	room_rotation.computeRoomRotationMatrix(room_map, R, bbox, map_resolution, 0, rotation_offset);
+/**
+ * 第一个是对地图进行长短边计算，计算得出最佳的旋转矩阵，并将地图进行旋转。
+ * 第二则是调用computeCellDecomposition()函数进行区间分割
+ * @param room_map
+ * @param map_resolution
+ * @param min_cell_area
+ * @param min_cell_width
+ * @param rotation_offset
+ * @param R
+ * @param bbox
+ * @param rotated_room_map
+ * @param cell_polygons
+ * @param polygon_centers
+ */
+void BoustrophedonExplorer::computeCellDecompositionWithRotation(
+        const cv::Mat &room_map,
+        const float map_resolution,
+        const double min_cell_area,
+        const int min_cell_width,
+        const double rotation_offset,
+        cv::Mat &R,
+        cv::Rect &bbox,
+        cv::Mat &rotated_room_map,
+        std::vector <GeneralizedPolygon> &cell_polygons,
+        std::vector <cv::Point> &polygon_centers) {
+    // *********************** I. Find the main directions of the map and rotate it in this manner. ***********************
+    RoomRotator room_rotation;
+    room_rotation.computeRoomRotationMatrix(room_map,
+                                            R,
+                                            bbox,
+                                            map_resolution,
+                                            0,
+                                            rotation_offset);
 	room_rotation.rotateRoom(room_map, rotated_room_map, R, bbox);
 
 #ifdef DEBUG_VISUALIZATION
@@ -260,9 +306,13 @@ void BoustrophedonExplorer::computeCellDecompositionWithRotation(const cv::Mat& 
 	computeCellDecomposition(rotated_room_map, map_resolution, min_cell_area, min_cell_width, cell_polygons, polygon_centers);
 }
 
-void BoustrophedonExplorer::computeCellDecomposition(const cv::Mat& room_map, const float map_resolution, const double min_cell_area,
-		const int min_cell_width, std::vector<GeneralizedPolygon>& cell_polygons, std::vector<cv::Point>& polygon_centers)
-{
+void BoustrophedonExplorer::computeCellDecomposition(
+        const cv::Mat &room_map,
+        const float map_resolution,
+        const double min_cell_area,
+        const int min_cell_width,
+        std::vector <GeneralizedPolygon> &cell_polygons,
+        std::vector <cv::Point> &polygon_centers) {
 	// *********************** II. Sweep a slice trough the map and mark the found cell boundaries. ***********************
 	// create a map copy to mark the cell boundaries
 	cv::Mat cell_map = room_map.clone();
@@ -270,26 +320,26 @@ void BoustrophedonExplorer::computeCellDecomposition(const cv::Mat& room_map, co
 	// find smallest y-value for that a white pixel occurs, to set initial y value and find initial number of segments
 	size_t y_start = 0;
 	bool found = false, obstacle = false;
-	int previous_number_of_segments = 0;
-	std::vector<int> previous_obstacles_end_x;		// keep track of the end points of obstacles
-	for(size_t y=0; y<room_map.rows; ++y)
+	int previous_number_of_segments = 0; // 上一行分段数
+	std::vector<int> previous_obstacles_end_x; // 退出障碍区间，进入通行区间的x坐标
+	for(size_t y=0; y<room_map.rows; ++y) // 从上到下
 	{
-		for(size_t x=0; x<room_map.cols; ++x)
+		for(size_t x=0; x<room_map.cols; ++x) // 从左到右
 		{
-			if(found == false && room_map.at<uchar>(y,x) == 255)
+			if(found == false && room_map.at<uchar>(y,x) == 255) // 找到第一个可通行区
 			{
-				y_start = y;
-				found = true;
+				y_start = y; // 标记 y_start
+				found = true; // 标记 已找到通行区
 			}
-			else if(found == true && obstacle == false && room_map.at<uchar>(y,x) == 0)
+			else if(found == true && obstacle == false && room_map.at<uchar>(y,x) == 0) // 一旦遇到障碍，则分段数+1
 			{
-				++previous_number_of_segments;
-				obstacle = true;
+				++previous_number_of_segments; // 分段数+1
+				obstacle = true; // 标记 已遇到障碍
 			}
-			else if(found == true && obstacle == true && room_map.at<uchar>(y,x) == 255)
+			else if(found == true && obstacle == true && room_map.at<uchar>(y,x) == 255) // 当从障碍，切换到可通行区
 			{
-				obstacle = false;
-				previous_obstacles_end_x.push_back(x);
+				obstacle = false; // 退出障碍循环
+				previous_obstacles_end_x.push_back(x); // 记录可通行区start_x
 			}
 		}
 
@@ -298,43 +348,50 @@ void BoustrophedonExplorer::computeCellDecomposition(const cv::Mat& room_map, co
 	}
 
 	// sweep trough the map and detect critical points
+	// 从下一行开始遍历
 	for(size_t y=y_start+1; y<room_map.rows; ++y) // start at y_start+1 because we know number of segments at y_start
 	{
 		int number_of_segments = 0; // int to count how many segments at the current slice are
-		std::vector<int> current_obstacles_start_x;
-		std::vector<int> current_obstacles_end_x;
+		std::vector<int> current_obstacles_start_x; // 从通行区进入障碍区的起始点（障碍）x坐标
+		std::vector<int> current_obstacles_end_x; // 从障碍区进入通行区的（通行）x坐标
 		bool obstacle_hit = false; // bool to check if the line currently hit an obstacle, s.t. not all black pixels trigger an event
 		bool hit_white_pixel = false; // bool to check if a white pixel has been hit at the current slice, to start the slice at the first white pixel
 
 		// count number of segments within this row
 		for(size_t x=0; x<room_map.cols; ++x)
 		{
+		    // 遇到第一个通行cell
 			if(hit_white_pixel == false && room_map.at<uchar>(y,x) == 255)
 				hit_white_pixel = true;
-			else if(hit_white_pixel == true)
+			else if(hit_white_pixel == true) // 联通线段遍历
 			{
+			    // 遇到障碍
 				if(obstacle_hit == false && room_map.at<uchar>(y,x) == 0) // check for obstacle
 				{
-					++number_of_segments;
-					obstacle_hit = true;
-					current_obstacles_start_x.push_back(x);
+					++number_of_segments; // 线段数+1
+					obstacle_hit = true; // 标记，进入障碍区循环
+					current_obstacles_start_x.push_back(x); // 记录障碍 start_x
 				}
 				else if(obstacle_hit == true && room_map.at<uchar>(y,x) == 255) // check for leaving obstacle
 				{
-					obstacle_hit = false;
-					current_obstacles_end_x.push_back(x);
+					obstacle_hit = false; // 退出障碍区循环
+					current_obstacles_end_x.push_back(x); // 记录障碍 end_x
 				}
 			}
 		}
 
 		// if the number of segments did not change, check whether the position of segments has changed so that there is a gap between them
 		bool segment_shift_detected = false;
-		if (previous_number_of_segments == number_of_segments && current_obstacles_start_x.size() == previous_obstacles_end_x.size()+1)
+		// 下一行线段个数，与上一行相等时
+		if (previous_number_of_segments == number_of_segments // 上下线段个数相同
+		&& current_obstacles_start_x.size() == previous_obstacles_end_x.size()+1 // 障碍个数相同
+		)
 		{
+		    // 当前段跟上一个的段数一样，但不连续
 			for (size_t i=0; i<previous_obstacles_end_x.size(); ++i)
 				if (current_obstacles_start_x[i] > previous_obstacles_end_x[i])
 				{
-					segment_shift_detected = true;
+					segment_shift_detected = true; // ???: segment_shift_detected
 					break;
 				}
 		}
@@ -349,27 +406,33 @@ void BoustrophedonExplorer::computeCellDecomposition(const cv::Mat& room_map, co
 			for(int x=0; x<room_map.cols; ++x)
 			{
 				if(hit_white_pixel == false && room_map.at<uchar>(y,x) == 255)
-					hit_white_pixel = true;
+					hit_white_pixel = true; // 进入通行区遍历
 				else if(hit_white_pixel == true && room_map.at<uchar>(y,x) == 0)
-				{
+				{ // 退出通行区，进入障碍区
 					// check over black pixel for other black pixels, if none occur a critical point is found
-					bool critical_point = true;
+					bool critical_point = true; // 是否为临界点(障碍)
 					for(int dx=-1; dx<=1; ++dx)
+					    // 上一行，左、中、右，若存在障碍
+					    // ???: 为什么是 y-1（上一行）？而不是 y+1（下一行）
 						if(room_map.at<uchar>(y-1,std::max(0,std::min(x+dx, room_map.cols-1))) == 0)
 							critical_point = false;
 
 					// if a critical point is found mark the separation, note that this algorithm goes left and right
 					// starting at the critical point until an obstacle is hit, because this prevents unnecessary cells
 					// behind other obstacles on the same y-value as the critical point
-					if(critical_point == true)
+                    //如果找到了标记分离的临界点，请注意该算法向左和向右移动
+                    //从临界点开始，直到一个障碍被击中，因为这防止不必要的栅格
+                    //在其他障碍物后面，与临界点相同的y值
+					if(critical_point == true) // 若当前障碍点为临界点
 					{
 						// to the left until a black pixel is hit
 						for(int dx=-1; x+dx>=0; --dx)
 						{
-							uchar& val = cell_map.at<uchar>(y,x+dx);
+							uchar& val = cell_map.at<uchar>(y,x+dx); // 往左回退
+							// 若回退点为障碍，且回退点上一行也为障碍
 							if(val == 255 && cell_map.at<uchar>(y-1,x+dx) == 255)
-								val = BORDER_PIXEL_VALUE;
-							else if(val == 0)
+								val = BORDER_PIXEL_VALUE; // 标记cell = 25
+							else if(val == 0) // 回退点为通行区，退出循环
 								break;
 						}
 
@@ -391,8 +454,9 @@ void BoustrophedonExplorer::computeCellDecomposition(const cv::Mat& room_map, co
 			// check the previous slice again for critical points --> y-1
 			for(int x=0; x<room_map.cols; ++x)
 			{
+			    // 上一个点为通行区
 				if(room_map.at<uchar>(y-1,x) == 255 && hit_white_pixel == false)
-					hit_white_pixel = true;
+					hit_white_pixel = true; // 标记 进入通行区循环
 				else if(hit_white_pixel == true && room_map.at<uchar>(y-1,x) == 0)
 				{
 					// check over black pixel for other black pixels, if none occur a critical point is found
@@ -483,8 +547,11 @@ void BoustrophedonExplorer::computeCellDecomposition(const cv::Mat& room_map, co
 	}
 }
 
-int BoustrophedonExplorer::mergeCells(cv::Mat& cell_map, cv::Mat& cell_map_labels, const double min_cell_area, const int min_cell_width)
-{
+int BoustrophedonExplorer::mergeCells(
+        cv::Mat &cell_map,
+        cv::Mat &cell_map_labels,
+        const double min_cell_area,
+        const int min_cell_width) {
 	// label all cells
 	//   --> create a label map with 0=walls/obstacles, -1=cell borders, 1,2,3,4...=cell labels
 	cell_map.convertTo(cell_map_labels, CV_32SC1, 256, 0);
@@ -703,9 +770,17 @@ void BoustrophedonExplorer::correctThinWalls(cv::Mat& room_map)
 	}
 }
 
-void BoustrophedonExplorer::computeBoustrophedonPath(const cv::Mat& room_map, const float map_resolution, const GeneralizedPolygon& cell,
-		std::vector<cv::Point2f>& fov_middlepoint_path, cv::Point& robot_pos,
-		const int grid_spacing_as_int, const int half_grid_spacing_as_int, const double path_eps, const int max_deviation_from_track, const int grid_obstacle_offset)
+void BoustrophedonExplorer::computeBoustrophedonPath(
+        const cv::Mat& room_map,
+        const float map_resolution,
+        const GeneralizedPolygon& cell,
+		std::vector<cv::Point2f>& fov_middlepoint_path,
+		cv::Point& robot_pos,
+		const int grid_spacing_as_int,
+		const int half_grid_spacing_as_int,
+		const double path_eps,
+		const int max_deviation_from_track,
+		const int grid_obstacle_offset)
 {
 	// get a map that has only the current cell drawn in
 	//	Remark:	single cells are obstacle free so it is sufficient to use the cell to check if a position can be reached during the
